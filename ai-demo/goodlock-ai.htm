@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GoodLock · AI-консультант — демо для «АПЕКС СЕКЬЮРИТИ»</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;900&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0f1216; --panel:#181d27; --panel2:#1d2330; --inset:#12161f;
+  --line:#2a3140; --line2:#39424f;
+  --ink:#e9e6dc; --mut:#8d95a5; --dim:#5d6577;
+  --brass:#d3a44a; --brass2:#f2ce7e; --ok:#5ecb8f; --err:#e2604e;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --disp:'Unbounded',sans-serif;
+  --body:'Golos Text',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--body); background:var(--bg); color:var(--ink);
+  min-height:100vh; overflow-x:hidden;
+}
+/* ---------- ambient background ---------- */
+body::before{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(233,230,220,.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(233,230,220,.028) 1px, transparent 1px);
+  background-size:44px 44px;
+}
+body::after{
+  content:""; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(600px 420px at 88% -6%, rgba(211,164,74,.09), transparent 60%),
+    radial-gradient(700px 500px at -10% 108%, rgba(127,176,214,.05), transparent 60%);
+}
+#keyhole-bg{
+  position:fixed; right:-70px; top:14vh; width:min(46vw,520px); z-index:0;
+  color:var(--brass); opacity:.055; pointer-events:none;
+  animation:float 14s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-16px) rotate(-1.2deg)}}
+/* ---------- topbar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:50; display:flex; align-items:center; justify-content:space-between;
+  gap:14px; padding:12px 22px; border-bottom:1px solid var(--line);
+  background:rgba(15,18,22,.88); backdrop-filter:blur(8px);
+}
+.brand{display:flex; align-items:center; gap:12px; min-width:0}
+.logomark{width:40px;height:40px;flex:none;filter:drop-shadow(0 4px 14px rgba(211,164,74,.28))}
+.brand-name{font-family:var(--disp); font-weight:900; font-size:19px; letter-spacing:.5px; line-height:1}
+.brand-name b{color:var(--brass)}
+.brand-sub{font:500 10px var(--mono); color:var(--mut); letter-spacing:1.6px; text-transform:uppercase; margin-top:5px; white-space:nowrap}
+.top-right{display:flex; align-items:center; gap:9px; flex:none}
+.chip{font:500 10.5px var(--mono); letter-spacing:.8px; color:var(--mut); border:1px solid var(--line); border-radius:999px; padding:6px 11px; white-space:nowrap}
+@media(max-width:640px){ .brand-sub{display:none} .chip.hide-s{display:none} }
+/* ---------- layout ---------- */
+.layout{
+  position:relative; z-index:1; max-width:1280px; margin:0 auto;
+  padding:18px 22px 10px; display:grid; grid-template-columns:minmax(0,1fr) 348px; gap:22px; align-items:start;
+}
+/* ---------- quick actions ---------- */
+.demobar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  padding:9px 13px; margin-bottom:14px; border:1px solid var(--line); border-radius:12px;
+  background:linear-gradient(180deg,#171c26,#141821);
+}
+.dlabel{font:600 10px var(--mono); letter-spacing:1.8px; color:var(--brass); text-transform:uppercase; margin-right:4px}
+.dbtn{
+  font-family:var(--body); font-size:12.5px; font-weight:600; color:var(--ink);
+  background:#1e2430; border:1px solid var(--line2); border-radius:8px; padding:7px 13px; cursor:pointer;
+  transition:transform .15s, border-color .2s, color .2s;
+}
+.dbtn:hover{border-color:var(--brass); color:var(--brass2); transform:translateY(-1px)}
+.dbtn:active{transform:scale(.97)}
+.dbtn:disabled{opacity:.4; pointer-events:none}
+.dbtn .tri{color:var(--brass); margin-right:5px}
+.dhint{margin-left:auto; font:400 10px var(--mono); color:var(--dim); letter-spacing:.4px}
+@media(max-width:640px){ .dhint{display:none} }
+button:focus-visible,.chipbtn:focus-visible,.tile:focus-visible,.cat-row:focus-visible,.dbtn:focus-visible,.sendbtn:focus-visible,.lform button:focus-visible{
+  outline:2px solid var(--brass2);outline-offset:3px;
+}
+/* ---------- chat card ---------- */
+.chat-card{
+  display:flex; flex-direction:column; height:calc(100vh - 208px); min-height:540px;
+  border:1px solid var(--line); border-radius:16px; overflow:hidden;
+  background:linear-gradient(180deg,var(--panel),#151a24);
+  box-shadow:0 24px 60px -28px rgba(0,0,0,.7);
+}
+.chat-head{
+  display:flex; align-items:center; gap:12px; padding:13px 18px;
+  border-bottom:1px solid var(--line); background:rgba(20,25,34,.6);
+}
+.ava{width:38px;height:38px;flex:none;position:relative}
+.ava svg{width:100%;height:100%}
+.ava::after{
+  content:""; position:absolute; inset:-4px; border-radius:14px; border:1.5px solid rgba(211,164,74,.5);
+  animation:pulse 2.4s ease-out infinite;
+}
+@keyframes pulse{0%{opacity:.7;transform:scale(.94)}70%{opacity:0;transform:scale(1.14)}100%{opacity:0}}
+.ch-name{font-family:var(--disp); font-weight:700; font-size:15px; letter-spacing:.4px}
+.ch-status{display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--mut); margin-top:3px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);animation:blink 2.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+.ch-ver{margin-left:auto; font:500 10px var(--mono); color:var(--dim); letter-spacing:1px}
+/* ---------- chat body ---------- */
+.chat-body{
+  flex:1; overflow-y:auto; padding:20px 18px; display:flex; flex-direction:column; gap:15px;
+  overscroll-behavior:contain;
+  background:
+    linear-gradient(rgba(233,230,220,.016) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(233,230,220,.016) 1px, transparent 1px);
+  background-size:38px 38px; background-color:var(--inset);
+}
+.chat-body::-webkit-scrollbar{width:8px}
+.chat-body::-webkit-scrollbar-thumb{background:#2e3644;border-radius:8px}
+.msg{display:flex; gap:10px; animation:msgIn .38s cubic-bezier(.2,.8,.3,1) both; max-width:100%}
+@keyframes msgIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.msg.user{justify-content:flex-end}
+.ava-s{width:28px;height:28px;flex:none;margin-top:2px}
+.ava-s svg{width:100%;height:100%}
+.mwrap{max-width:82%; min-width:0; display:flex; flex-direction:column}
+.msg.user .mwrap{align-items:flex-end}
+.bubble{
+  padding:12px 15px; font-size:14.5px; line-height:1.58;
+  background:var(--panel2); border:1px solid var(--line); border-radius:4px 16px 16px 16px;
+}
+.bubble b{color:var(--brass2)}
+.msg.user .bubble{
+  background:linear-gradient(135deg,#e3b45e,#b98a2c); color:#1d1405; font-weight:500;
+  border:none; border-radius:16px 4px 16px 16px; box-shadow:0 6px 18px -8px rgba(211,164,74,.5);
+}
+.bubble.wide{max-width:600px}
+.mtime{font:400 10px var(--mono); color:var(--dim); margin-top:6px; letter-spacing:.5px}
+/* typing */
+.typing{display:flex;align-items:center;gap:10px;animation:msgIn .3s both}
+.t-bub{display:flex;gap:5px;padding:14px 16px;background:var(--panel2);border:1px solid var(--line);border-radius:4px 16px 16px 16px}
+.t-bub span{width:6px;height:6px;border-radius:50%;background:var(--brass);opacity:.5;animation:tb 1.1s infinite}
+.t-bub span:nth-child(2){animation-delay:.15s}.t-bub span:nth-child(3){animation-delay:.3s}
+@keyframes tb{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-4px);opacity:1}}
+.t-label{font:400 10px var(--mono);color:var(--dim);letter-spacing:.6px}
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chips.used{opacity:.5;pointer-events:none}
+.chipbtn{
+  font-family:var(--body);font-size:13px;font-weight:500;color:var(--ink);
+  background:transparent;border:1px solid var(--line2);border-radius:999px;padding:8px 15px;cursor:pointer;
+  transition:transform .15s,border-color .2s,color .2s,background .2s;
+}
+.chipbtn:hover{border-color:var(--brass);color:var(--brass2);transform:translateY(-1px)}
+.chipbtn:active{transform:scale(.97)}
+.chipbtn.primary{background:linear-gradient(135deg,#e3b45e,#b98a2c);color:#1d1405;font-weight:700;border-color:transparent}
+.chipbtn.primary:hover{color:#1d1405;filter:brightness(1.08)}
+/* product cards */
+.pcards{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:8px;margin-top:12px}
+.pcard{
+  position:relative;background:#161b26;border:1px solid var(--line);border-radius:11px;padding:12px;
+  transition:transform .2s,border-color .2s,box-shadow .2s;
+}
+.pcard:hover{transform:translateY(-3px);border-color:rgba(211,164,74,.6);box-shadow:0 10px 24px -14px rgba(211,164,74,.35)}
+.pbadge{display:inline-block;font:600 8.5px var(--mono);letter-spacing:1px;color:var(--brass2);border:1px solid rgba(211,164,74,.5);border-radius:4px;padding:2.5px 6px;margin-bottom:8px}
+.pname{font-size:13.5px;font-weight:700;letter-spacing:.2px}
+.pspec{font-size:11.5px;color:var(--mut);margin-top:4px;line-height:1.45}
+.pprice{font:600 12.5px var(--mono);color:var(--brass2);margin-top:9px}
+/* category tiles */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+@media(max-width:480px){.tiles{grid-template-columns:1fr}}
+.tile{
+  display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;
+  background:#161b26;border:1px solid var(--line);border-radius:11px;padding:11px 12px;cursor:pointer;
+  color:var(--ink);transition:transform .18s,border-color .2s;
+}
+.tile:hover{border-color:var(--brass);transform:translateY(-2px)}
+.tile:active{transform:scale(.98)}
+.tile .ti{color:var(--brass)} .tile .ti svg{width:21px;height:21px}
+.tile .tn{font-size:12.5px;font-weight:600}
+.tile .tc{font:500 9.5px var(--mono);color:var(--dim);letter-spacing:.5px}
+/* form + success */
+.lform{background:#161b26;border:1px solid var(--line);border-radius:13px;padding:15px;margin-top:12px;max-width:430px}
+.lform label{display:block;font:600 9.5px var(--mono);letter-spacing:1.6px;text-transform:uppercase;color:var(--mut);margin:10px 0 5px}
+.lform label:first-child{margin-top:0}
+.lform input,.lform textarea{
+  width:100%;background:#10141c;border:1px solid var(--line2);border-radius:9px;padding:10px 12px;
+  color:var(--ink);font:400 14px var(--body);resize:none;transition:border-color .2s,box-shadow .2s;
+}
+.lform input:focus,.lform textarea:focus{outline:none;border-color:var(--brass);box-shadow:0 0 0 3px rgba(211,164,74,.14)}
+.lform .err{border-color:var(--err)!important;animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.lform button{
+  width:100%;margin-top:14px;padding:12px;border:none;border-radius:9px;cursor:pointer;
+  background:linear-gradient(135deg,#e3b45e,#b98a2c);color:#1d1405;font:700 14px var(--body);letter-spacing:.3px;
+  transition:filter .2s,transform .15s;
+}
+.lform button:hover{filter:brightness(1.08)} .lform button:active{transform:scale(.98)}
+.lform-note{font:400 9.5px var(--mono);color:var(--dim);margin-top:10px;letter-spacing:.4px}
+.ok-badge{
+  display:inline-flex;align-items:center;gap:9px;padding:12px 18px;border-radius:12px;
+  border:1px solid rgba(94,203,143,.55);background:rgba(94,203,143,.09);
+  font-size:15px;font-weight:700;color:#c9efd8;
+}
+.ok-badge svg{width:19px;height:19px;color:var(--ok)}
+/* input bar */
+.chat-input{border-top:1px solid var(--line);padding:12px 14px;background:rgba(20,25,34,.65)}
+.chat-input form{display:flex;gap:9px}
+.chat-input input{
+  flex:1;background:#10141c;border:1px solid var(--line2);border-radius:11px;padding:12px 15px;
+  color:var(--ink);font:400 14px var(--body);transition:border-color .2s,box-shadow .2s;
+}
+.chat-input input:focus{outline:none;border-color:var(--brass);box-shadow:0 0 0 3px rgba(211,164,74,.13)}
+.sendbtn{
+  width:46px;flex:none;border:none;border-radius:11px;cursor:pointer;color:#1d1405;
+  background:linear-gradient(135deg,#e3b45e,#b98a2c);display:flex;align-items:center;justify-content:center;
+  transition:filter .2s,transform .15s;
+}
+.sendbtn svg{width:19px;height:19px}
+.sendbtn:hover{filter:brightness(1.1)} .sendbtn:active{transform:scale(.94)}
+body.busy .chipbtn,body.busy .tile,body.busy .cat-row,body.busy .sendbtn{pointer-events:none;opacity:.6}
+/* ---------- side panel ---------- */
+.panel{position:sticky;top:86px;display:flex;flex-direction:column;gap:14px}
+.sec{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px;
+  animation:msgIn .5s both;
+}
+.sec:nth-child(2){animation-delay:.06s}.sec:nth-child(3){animation-delay:.12s}
+.sec:nth-child(4){animation-delay:.18s}.sec:nth-child(5){animation-delay:.24s}
+.sec-h{
+  display:flex;align-items:center;gap:8px;font:600 10px var(--mono);letter-spacing:1.8px;
+  text-transform:uppercase;color:var(--brass);margin-bottom:12px;
+}
+.sec-h::before{content:"";width:7px;height:7px;background:var(--brass);clip-path:polygon(0 0,100% 0,100% 100%);flex:none}
+.agent{display:flex;align-items:center;gap:12px}
+.agent .ava{width:44px;height:44px}
+.agent-name{font-family:var(--disp);font-weight:700;font-size:14px;letter-spacing:.4px}
+.agent-sub{font-size:11px;color:var(--mut);margin-top:3px}
+.agent-badge{margin-left:auto;font:600 9px var(--mono);letter-spacing:1.4px;color:var(--brass2);border:1px solid rgba(211,164,74,.5);border-radius:5px;padding:4px 7px}
+.prow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6.5px 0;border-bottom:1px dashed rgba(57,66,79,.55)}
+.prow:last-child{border-bottom:none}
+.prow .k{font-size:11.5px;color:var(--mut)}
+.prow .v{font-size:12.5px;font-weight:600;text-align:right;transition:color .3s}
+.v.flash{animation:flash 1.1s ease}
+@keyframes flash{0%{color:var(--brass2);text-shadow:0 0 12px rgba(242,206,126,.8)}100%{text-shadow:none}}
+.rec-empty{border:1px dashed var(--line2);border-radius:10px;padding:14px;text-align:center;font:400 10.5px var(--mono);color:var(--dim);letter-spacing:.5px;line-height:1.7}
+.rec-item{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px dashed rgba(57,66,79,.5);animation:msgIn .35s both}
+.rec-item:last-child{border-bottom:none}
+.rec-ico{width:32px;height:32px;flex:none;display:flex;align-items:center;justify-content:center;background:#222836;border-radius:8px;color:var(--brass)}
+.rec-ico svg{width:16px;height:16px}
+.rec-n{font-size:12px;font-weight:600}
+.rec-p{margin-left:auto;font:600 11px var(--mono);color:var(--brass2);white-space:nowrap}
+.step{display:flex;align-items:center;gap:10px;padding:6px 0;color:var(--dim);font-size:12.5px;transition:color .4s}
+.step .sdot{width:16px;height:16px;flex:none;border-radius:50%;border:1.5px solid var(--line2);position:relative;transition:all .4s}
+.step.done{color:var(--ink)}
+.step.done .sdot{background:var(--brass);border-color:var(--brass)}
+.step.done .sdot::after{content:"";position:absolute;left:4.6px;top:2px;width:4px;height:8px;border:solid #1d1405;border-width:0 2px 2px 0;transform:rotate(42deg)}
+.step.in-progress{color:var(--brass2)}
+.step.in-progress .sdot{border-color:var(--brass);box-shadow:0 0 0 4px rgba(211,164,74,.12);animation:stepPulse 1.2s ease-in-out infinite}
+@keyframes stepPulse{50%{transform:scale(1.18);box-shadow:0 0 0 7px rgba(211,164,74,0)}}
+.lead-card{
+  display:none;margin-top:12px;border:1px solid rgba(211,164,74,.5);border-radius:11px;padding:12px;
+  background:rgba(211,164,74,.06);animation:msgIn .4s both;
+}
+.lead-card.on{display:block}
+.lead-card .lc-h{font:600 10px var(--mono);letter-spacing:1.4px;color:var(--brass2);margin-bottom:8px}
+.lead-card .lc-r{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;padding:2.5px 0}
+.lead-card .lc-r span:first-child{color:var(--mut)}
+.lead-card .lc-r span:last-child{font-weight:600;text-align:right}
+.cat-row{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;cursor:pointer;color:var(--ink);padding:7.5px 2px;border-bottom:1px dashed rgba(57,66,79,.5);transition:color .2s,padding-left .2s}
+.cat-row:last-of-type{border-bottom:none}
+.cat-row:hover{color:var(--brass2);padding-left:6px}
+.cat-row svg{width:16px;height:16px;color:var(--mut);flex:none;transition:color .2s}
+.cat-row:hover svg{color:var(--brass)}
+.cat-row .cn{font-size:12.5px;font-weight:500}
+.cat-row .cc{margin-left:auto;font:500 9.5px var(--mono);color:var(--dim)}
+/* footer */
+footer{
+  position:relative;z-index:1;text-align:center;padding:22px 20px 30px;
+  font:400 10.5px var(--mono);color:var(--dim);letter-spacing:.8px;line-height:1.9;
+}
+footer b{color:var(--mut)}
+/* ---------- responsive ---------- */
+@media(max-width:980px){
+  .layout{grid-template-columns:1fr;padding:14px 14px 8px}
+  .chat-card{height:min(68dvh,640px);min-height:440px}
+  .panel{position:static;display:grid;grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:14px}
+}
+@media(max-width:480px){
+  .topbar{padding:10px 14px}.layout{padding:12px 10px 8px}.demobar{padding:8px 9px;gap:7px}.dlabel{width:100%}
+  .dbtn{flex:1;padding:8px 9px;font-size:12px}.chat-card{height:calc(100dvh - 178px);min-height:430px;border-radius:13px}
+  .chat-body{padding:16px 12px}.chat-head{padding:12px 14px}.mwrap{max-width:88%}.bubble{font-size:14px;padding:11px 13px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ambient keyhole -->
+<svg id="keyhole-bg" viewBox="0 0 120 160" fill="none" stroke="currentColor" stroke-width="1.4">
+  <circle cx="60" cy="48" r="30"/><circle cx="60" cy="48" r="22" stroke-dasharray="3 6"/>
+  <path d="M60 66 L78 128 H42 Z"/><path d="M60 78 L70 122 H50 Z"/>
+  <path d="M60 4v10 M60 146v10 M6 48h10 M104 48h10"/>
+</svg>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="logomark" viewBox="0 0 40 40"><path d="M20 2 35.6 11v18L20 38 4.4 29V11z" fill="none" stroke="#d3a44a" stroke-width="2"/><circle cx="20" cy="15.5" r="4.6" fill="#d3a44a"/><path d="M20 18.5l4.2 9.5h-8.4z" fill="#d3a44a"/></svg>
+    <div>
+      <div class="brand-name">GOOD<b>LOCK</b></div>
+      <div class="brand-sub">АПЕКС СЕКЬЮРИТИ · замки, ручки, фурнитура</div>
+    </div>
+  </div>
+  <div class="top-right">
+    <span class="chip hide-s">СБ · 15.08.2026</span>
+    <span class="chip">Онлайн-консультация</span>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ======== CHAT ======== -->
+  <section>
+    <div class="demobar" aria-label="Быстрый выбор сценария">
+      <span class="dlabel">Быстрый выбор</span>
+      <button class="dbtn" id="btn-lock"><span class="tri">▶</span>Подобрать замок</button>
+      <button class="dbtn" id="btn-handles"><span class="tri">▶</span>Подобрать ручки</button>
+      <button class="dbtn" id="btn-reset">⟳ Начать заново</button>
+    </div>
+
+    <div class="chat-card">
+      <div class="chat-head">
+        <div class="ava"><svg viewBox="0 0 40 40"><path d="M20 2 35.6 11v18L20 38 4.4 29V11z" fill="none" stroke="#d3a44a" stroke-width="2"/><circle cx="20" cy="15.5" r="4.6" fill="#d3a44a"/><path d="M20 18.5l4.2 9.5h-8.4z" fill="#d3a44a"/></svg></div>
+        <div>
+          <div class="ch-name">GoodLock AI</div>
+          <div class="ch-status"><span class="dot"></span>онлайн · отвечает за секунды</div>
+        </div>
+      </div>
+      <div class="chat-body" id="chatBody" role="log" aria-live="polite" aria-relevant="additions"></div>
+      <div class="chat-input">
+        <form id="say-form" autocomplete="off">
+          <input id="say" type="text" aria-label="Сообщение консультанту" placeholder="Например: нужен замок 4-го класса для металлической двери…" maxlength="300">
+          <button class="sendbtn" type="submit" aria-label="Отправить">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2.5-7.5z"/></svg>
+          </button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======== SIDE PANEL ======== -->
+  <aside class="panel">
+    <div class="sec">
+      <div class="agent">
+        <div class="ava"><svg viewBox="0 0 40 40"><path d="M20 2 35.6 11v18L20 38 4.4 29V11z" fill="none" stroke="#d3a44a" stroke-width="2"/><circle cx="20" cy="15.5" r="4.6" fill="#d3a44a"/><path d="M20 18.5l4.2 9.5h-8.4z" fill="#d3a44a"/></svg></div>
+        <div>
+          <div class="agent-name">AI-консультант</div>
+          <div class="agent-sub">GoodLock · «АПЕКС СЕКЬЮРИТИ»</div>
+        </div>
+        <span class="agent-badge">AI</span>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">Карточка обращения · параметры</div>
+      <div class="prow"><span class="k">Направление</span><span class="v" id="p-dir">—</span></div>
+      <div class="prow"><span class="k">Тип двери</span><span class="v" id="p-door">—</span></div>
+      <div class="prow"><span class="k">Назначение</span><span class="v" id="p-purpose">—</span></div>
+      <div class="prow"><span class="k">Уровень защиты</span><span class="v" id="p-level">—</span></div>
+      <div class="prow"><span class="k">Бюджет</span><span class="v" id="p-budget">—</span></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">Рекомендации</div>
+      <div id="recs"><div class="rec-empty">появятся после уточнения задачи</div></div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">Передача менеджеру</div>
+      <div class="step" id="st1"><span class="sdot"></span>Запрос сформирован</div>
+      <div class="step" id="st2"><span class="sdot"></span>Заявка создана</div>
+      <div class="step" id="st3"><span class="sdot"></span>Передана менеджеру</div>
+      <div class="lead-card" id="leadCard">
+        <div class="lc-h">ЗАЯВКА <span id="leadId"></span></div>
+        <div class="lc-r"><span>Имя</span><span id="leadName"></span></div>
+        <div class="lc-r"><span>Телефон</span><span id="leadPhone"></span></div>
+        <div class="lc-r"><span>Состав</span><span id="leadCtx"></span></div>
+        <div class="lc-r"><span>Статус</span><span style="color:var(--ok)">Передана менеджеру ✓</span></div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="sec-h">Каталог GoodLock</div>
+      <div id="catList"></div>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <b>GoodLock / АПЕКС СЕКЬЮРИТИ</b> · онлайн-консультант по замкам, ручкам и дверной фурнитуре
+</footer>
+
+<script>
+/* ================= ICONS ================= */
+const sv=(p)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const I={
+  lock:sv('<rect x="4.5" y="10.5" width="15" height="9.5" rx="2"/><path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7M12 14v2.4"/>'),
+  handle:sv('<path d="M3.5 9.2h9.4"/><circle cx="16.3" cy="9.2" r="2.8"/><path d="M16.3 12v4.6"/>'),
+  cyl:sv('<circle cx="12" cy="7" r="4.3"/><path d="M12 7v2.2"/><path d="M9 11.2h6v8.3a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1z"/>'),
+  closer:sv('<rect x="3" y="6" width="9" height="6" rx="1.5"/><path d="M12 9h4l4 5"/><circle cx="20" cy="14" r="1.3"/>'),
+  hinge:sv('<path d="M5 4h4v16H5z"/><path d="M15 4h4v16h-4z"/><path d="M12 3v18"/>'),
+  electro:sv('<rect x="4.5" y="10.5" width="15" height="9.5" rx="2"/><path d="M8.2 10.5V7.8a3.8 3.8 0 0 1 7.6 0v2.7"/><path d="M17 3.5a5 5 0 0 1 3.5 3.5M17.5 6a2.5 2.5 0 0 1 1.5 1.5"/>'),
+  code:sv('<rect x="4" y="4" width="16" height="16" rx="2.5"/><circle cx="9" cy="9" r=".9" fill="currentColor"/><circle cx="15" cy="9" r=".9" fill="currentColor"/><circle cx="9" cy="13" r=".9" fill="currentColor"/><circle cx="15" cy="13" r=".9" fill="currentColor"/><circle cx="9" cy="17" r=".9" fill="currentColor"/><circle cx="15" cy="17" r=".9" fill="currentColor"/>'),
+  hardware:sv('<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12h7M12 8.5v7"/>'),
+  key:sv('<circle cx="12" cy="9" r="3.6"/><path d="M12 12.4 14.4 19H9.6z"/>')
+};
+
+/* ================= DATA ================= */
+const P={
+  high:[
+    {n:'GL-GUARD S4',t:'Сувальдный врезной · 4-й класс защиты',p:'от 6 900 ₽',b:'ХИТ'},
+    {n:'GL-CORE X5',t:'Цилиндровый · перфокарта + броненакладка',p:'от 7 450 ₽',b:'РЕКОМЕНДУЕМ'},
+    {n:'GL-MONOBLOCK 2S',t:'Моноблок · два механизма, перекодировка',p:'от 9 800 ₽',b:'МАКСИМУМ'}],
+  base:[
+    {n:'GL-GUARD S2',t:'Сувальдный врезной · 2-й класс защиты',p:'от 3 200 ₽'},
+    {n:'GL-CORE C3',t:'Цилиндровый · ключ/вертушка',p:'от 2 950 ₽',b:'ОПТИМАЛЬНО'},
+    {n:'GL-BASE 3R',t:'Накладной · 3 ригеля, универсальный',p:'от 2 400 ₽',b:'БЮДЖЕТ'}],
+  handles:[
+    {n:'GL-URBAN M9',t:'На розетке · алюминий, матовый графит',p:'от 1 450 ₽',b:'ХИТ'},
+    {n:'GL-LINE S',t:'На планке · защёлка, для межкомнатных',p:'от 1 190 ₽'},
+    {n:'GL-PORTAL 300',t:'Стационарная скоба · нержавеющая сталь',p:'от 2 100 ₽'}]
+};
+const CAT={
+  locks:{name:'Дверные замки',icon:'lock',count:'214 SKU',desc:'Основной каталог: врезные, накладные и навесные замки — от базовых моделей до 4-го класса защиты для металлических дверей.',products:P.high},
+  handles:{name:'Дверные ручки',icon:'handle',count:'186 SKU',desc:'Нажимные и стационарные ручки на розетке и планке — для межкомнатных и входных дверей, матовые, полированные и окрашенные покрытия.',products:P.handles},
+  cylinders:{name:'Цилиндровые механизмы',icon:'cyl',count:'97 SKU',desc:'Евроцилиндры и личинки: ключ/ключ и ключ/вертушка, с защитой от высверливания, бампинга и отмычек.',products:[P.high[1],{n:'GL-CORE C3',t:'Цилиндровый механизм · ключ/вертушка',p:'от 1 950 ₽'}]},
+  closers:{name:'Доводчики',icon:'closer',count:'42 SKU',desc:'Доводчики для дверей весом 40–160 кг: плавное закрывание, регулировка дохлопа, морозостойкое исполнение.',products:[{n:'GL-CLOSE 60',t:'Для дверей до 60 кг · плавный ход',p:'от 1 900 ₽'},{n:'GL-CLOSE 120 PRO',t:'Для дверей до 120 кг · морозостойкий',p:'от 3 400 ₽',b:'PRO'}]},
+  hinges:{name:'Петли',icon:'hinge',count:'118 SKU',desc:'Накладные, ввертные и скрытые петли — включая усиленные серии с подшипником для металлических дверей.',products:[{n:'GL-HINGE 20B',t:'Накладная · подшипник, до 120 кг',p:'от 480 ₽'},{n:'GL-HINGE HIDDEN',t:'Скрытая · 3D-регулировка',p:'от 1 650 ₽',b:'СКРЫТЫЙ МОНТАЖ'}]},
+  electronic:{name:'Электронные замки',icon:'electro',count:'36 SKU',desc:'Замки с управлением по коду, карте или смартфону — для квартир, офисов и частных домов.',products:[{n:'GL-SMART T1',t:'Код + карта + Bluetooth',p:'от 12 900 ₽',b:'SMART'},{n:'GL-SMART BIO',t:'Отпечаток пальца + код',p:'от 18 500 ₽',b:'БИОМЕТРИЯ'}]},
+  code:{name:'Кодовые замки',icon:'code',count:'28 SKU',desc:'Механические и электронные кодовые замки для калиток, подъездов и служебных помещений.',products:[{n:'GL-CODE M3',t:'Механический · для калиток и ворот',p:'от 2 700 ₽'},{n:'GL-CODE E1',t:'Электронный · вандалостойкая клавиатура',p:'от 5 900 ₽'}]},
+  hardware:{name:'Дверная фурнитура',icon:'hardware',count:'240 SKU',desc:'Броненакладки, дверные глазки, стопоры, задвижки и другие комплектующие для дверей.',products:[{n:'GL-ARMOR B',t:'Броненакладка врезная · закалённая сталь',p:'от 890 ₽',b:'ЗАЩИТА'},{n:'GL-EYE 200',t:'Дверной глазок · обзор 200°',p:'от 640 ₽'}]}
+};
+const ORDER=['locks','handles','cylinders','closers','hinges','electronic','code','hardware'];
+
+const LINE1='Конечно! Помогу подобрать подходящий вариант. Подскажите, пожалуйста, для какой двери нужен замок и какой уровень защиты вам необходим?';
+const LINE2='Понял. Могу предложить несколько вариантов. Чтобы подобрать точнее, можно указать бюджет или выбрать уровень защиты.';
+const CLOSING='Я могу передать запрос менеджеру, чтобы он уточнил наличие, цену и помог оформить заказ.';
+
+const MAIN_CHIPS=[{l:'Подобрать замок',a:'pick-lock'},{l:'Посмотреть категории',a:'categories'},{l:'Связаться с менеджером',a:'manager'}];
+const LEAD_CHIPS=[{l:'Оставить заявку',a:'lead',p:1},{l:'Посмотреть категории',a:'categories'}];
+const LEVEL_CHIPS=[{l:'Высокий уровень защиты',a:'lv-high'},{l:'Стандартный уровень',a:'lv-std'},{l:'Бюджет до 5 000 ₽',a:'lv-budget'}];
+const DOOR_CHIPS=[{l:'Межкомнатная дверь',a:'door-int'},{l:'Входная дверь',a:'door-entry'},{l:'Подскажите с выбором',a:'door-help'}];
+
+/* ================= STATE / HELPERS ================= */
+const S={awaitLock:false};
+const $=id=>document.getElementById(id);
+const chatBody=$('chatBody');
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const now=()=>new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+
+function scrollBottom(){chatBody.scrollTo({top:chatBody.scrollHeight,behavior:'smooth'});}
+function setBusy(b){document.body.classList.toggle('busy',b);['btn-lock','btn-handles','btn-reset'].forEach(id=>$(id).disabled=b);$('say').disabled=b;}
+
+function setParam(id,val){const el=$(id);el.textContent=val;el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');}
+function markStep(n){$('st'+n).classList.add('done');}
+function setStepProgress(n){$('st'+n).classList.add('in-progress');}
+function resetSteps(){[1,2,3].forEach(n=>$('st'+n).classList.remove('done','in-progress'));}
+
+function renderRecs(list){
+  $('recs').innerHTML=list.map(p=>`<div class="rec-item"><span class="rec-ico">${I.key}</span><div><div class="rec-n">${p.n}</div></div><span class="rec-p">${p.p}</span></div>`).join('');
+}
+function resetRecs(){$('recs').innerHTML='<div class="rec-empty">появятся после уточнения задачи</div>';}
+
+/* catalog list in sidebar */
+$('catList').innerHTML=ORDER.map(id=>{const c=CAT[id];return `<button class="cat-row" data-cat="${id}">${I[c.icon]}<span class="cn">${c.name}</span><span class="cc">${c.count}</span></button>`;}).join('');
+
+/* ================= MESSAGES ================= */
+function userSay(text){
+  const m=document.createElement('div');m.className='msg user';
+  m.innerHTML=`<div class="mwrap"><div class="bubble">${esc(text)}</div><div class="mtime">${now()} · вы</div></div>`;
+  chatBody.appendChild(m);scrollBottom();
+}
+function showTyping(){
+  const t=document.createElement('div');t.className='typing';t.id='typingRow';
+  t.innerHTML=`<div class="ava-s">${I.key}</div><div class="t-bub"><span></span><span></span><span></span></div><span class="t-label">GoodLock AI печатает…</span>`;
+  chatBody.appendChild(t);scrollBottom();
+}
+function hideTyping(){const t=$('typingRow');if(t)t.remove();}
+function chipsHtml(list){return `<div class="chips">${list.map(c=>`<button class="chipbtn${c.p?' primary':''}" data-a="${c.a}">${c.l}</button>`).join('')}</div>`;}
+function cardsHtml(list){return `<div class="pcards">${list.map(p=>`<div class="pcard">${p.b?`<span class="pbadge">${p.b}</span>`:''}<div class="pname">${p.n}</div><div class="pspec">${p.t}</div><div class="pprice">${p.p}</div></div>`).join('')}</div>`;}
+function tilesHtml(){return `<div class="tiles">${ORDER.map(id=>{const c=CAT[id];return `<button class="tile" data-cat="${id}"><span class="ti">${I[c.icon]}</span><span class="tn">${c.name}</span><span class="tc">${c.count}</span></button>`;}).join('')}</div>`;}
+
+async function aiSay(text,o={}){
+  if(!o.noTyping){showTyping();const plain=text.replace(/<[^>]+>/g,'');await wait(o.delay??Math.min(700+plain.length*13,1900));hideTyping();}
+  const wide=(o.cards||o.grid||o.form)?' wide':'';
+  const m=document.createElement('div');m.className='msg ai';
+  m.innerHTML=`<div class="ava-s">${I.key}</div><div class="mwrap"><div class="bubble${wide}">${text}${o.cards?cardsHtml(o.cards):''}${o.grid?tilesHtml():''}${o.form||''}</div>${o.chips?chipsHtml(o.chips):''}<div class="mtime">${now()} · GoodLock AI</div></div>`;
+  chatBody.appendChild(m);scrollBottom();
+  return m;
+}
+
+/* ================= FORM ================= */
+function ctxString(){
+  const parts=[S.dir,S.door,S.purpose,S.level&&('Уровень: '+S.level.toLowerCase()),S.budget&&('Бюджет: '+S.budget.toLowerCase())].filter(Boolean);
+  return parts.length?parts.join(' · '):'Тема не указана';
+}
+function leadFormHtml(){
+  return `<form class="lform" novalidate>
+    <label for="f-name">Имя *</label><input id="f-name" type="text" placeholder="Как к вам обращаться">
+    <label for="f-phone">Телефон *</label><input id="f-phone" type="tel" inputmode="tel" placeholder="+7 (___) ___-__-__">
+    <label for="f-comment">Комментарий</label><textarea id="f-comment" rows="2">${esc(ctxString())}</textarea>
+    <button type="submit">Отправить менеджеру</button>
+    <div class="lform-note">Менеджер уточнит детали обращения и свяжется с вами.</div>
+  </form>`;
+}
+chatBody.addEventListener('submit',async e=>{
+  const f=e.target.closest('form.lform');if(!f)return;e.preventDefault();
+  const name=f.querySelector('#f-name'),phone=f.querySelector('#f-phone');
+  let ok=true;
+  if(name.value.trim().length<2){name.classList.add('err');ok=false;setTimeout(()=>name.classList.remove('err'),900);}
+  if(phone.value.replace(/\D/g,'').length<7){phone.classList.add('err');ok=false;setTimeout(()=>phone.classList.remove('err'),900);}
+  if(!ok)return;
+  const nm=name.value.trim(),ph=phone.value.trim(),submit=f.querySelector('button[type="submit"]');
+  const id='GL-'+(1000+Math.floor(Math.random()*9000));
+  submit.disabled=true;submit.textContent='Создаём заявку…';setBusy(true);markStep(1);setStepProgress(2);
+  await wait(650);
+  $('st2').classList.remove('in-progress');markStep(2);setStepProgress(3);submit.textContent='Передаём менеджеру…';
+  await wait(650);
+  $('st3').classList.remove('in-progress');markStep(3);
+  f.outerHTML=`<div class="ok-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5 9.5 18 20 6.5"/></svg>Заявка передана менеджеру ✅</div>`;
+  $('leadId').textContent=id;$('leadName').textContent=nm;$('leadPhone').textContent=ph;$('leadCtx').textContent=ctxString();
+  $('leadCard').classList.add('on');
+  await aiSay(`Спасибо, ${esc(nm)}! Я зафиксировал обращение <b>№${id}</b> и передал его менеджеру. Он свяжется с вами по номеру ${esc(ph)} в течение 15 минут в рабочее время: ПН–СБ, 9:00–19:00.`,{chips:[{l:'Новый запрос',a:'reset'},{l:'Посмотреть категории',a:'categories'}],delay:900});
+  setBusy(false);
+});
+
+/* ================= FLOWS ================= */
+function lockStart(){
+  S.dir='Дверные замки';setParam('p-dir',S.dir);markStep(1);S.awaitLock=true;
+  aiSay(LINE1,{chips:[{l:'Для входной металлической',a:'txt-metal'},{l:'Для межкомнатной',a:'txt-interior'},{l:'Нужна консультация',a:'txt-help'}]});
+}
+function lockDetail(text){
+  const q=text.toLowerCase();
+  if(/металл|желез|сталь|входн/.test(q)){S.door='Металлическая';setParam('p-door',S.door);}
+  if(/входн/.test(q)){S.purpose='Входная дверь';setParam('p-purpose',S.purpose);}
+  else if(/межкомнатн/.test(q)){S.purpose='Межкомнатная дверь';setParam('p-purpose',S.purpose);}
+  if(/надёжн|надежн|высок|максим|класс|безопасн|крепк|хорош/.test(q)){S.level='Высокий';setParam('p-level',S.level);}
+  aiSay(LINE2,{chips:MAIN_CHIPS});
+}
+function lockPick(){
+  if(!S.dir){S.dir='Дверные замки';setParam('p-dir',S.dir);markStep(1);}
+  S.awaitLock=false;
+  aiSay('Отлично, подберу варианты. Какой уровень защиты рассматриваем — или ориентируемся на бюджет?',{chips:LEVEL_CHIPS});
+}
+function level(lv){
+  const set=lv==='high'?P.high:P.base;
+  if(lv==='high'){S.level='Высокий';setParam('p-level','Высокий (3–4 класс)');}
+  else if(lv==='std'){S.level='Стандартный';setParam('p-level','Стандартный');}
+  else{S.budget='До 5 000 ₽';setParam('p-budget','До 5 000 ₽');S.level='Стандартный';setParam('p-level','Стандартный');}
+  if(!S.dir){S.dir='Дверные замки';setParam('p-dir',S.dir);}
+  markStep(1);renderRecs(set);
+  const label=lv==='high'?'высокий уровень защиты':(lv==='std'?'стандартный уровень':'бюджет до 5 000 ₽');
+  aiSay(`Принято: ${label}. Вот подходящие позиции из каталога GoodLock:`+
+    `<br><br>Могу сравнить модели по характеристикам или показать аналоги. ${CLOSING}`,{cards:set,chips:LEAD_CHIPS});
+}
+function handlesStart(){
+  S.dir='Дверные ручки';setParam('p-dir',S.dir);markStep(1);S.awaitLock=false;
+  aiSay('Конечно! Подскажите, пожалуйста, для какой двери нужны ручки и какая отделка предпочтительнее — матовая, полированная или окрашенная?',{chips:DOOR_CHIPS});
+}
+function handleDoor(k){
+  let text;
+  if(k==='int'){S.door='Межкомнатная';setParam('p-door','Межкомнатная');S.purpose='Ручки на розетке';setParam('p-purpose','Ручки на розетке');
+    text='Понял. Для межкомнатных дверей подойдёт категория <b>«Дверные ручки»</b> — модели на розетке: тихая защёлка, аккуратный монтаж, матовые покрытия. Вот популярные позиции:';}
+  else if(k==='entry'){S.door='Входная';setParam('p-door','Входная');S.purpose='Усиленные ручки';setParam('p-purpose','Усиленные ручки');
+    text='Для входной двери рекомендую усиленные модели из раздела <b>«Дверные ручки»</b> — на планке или на розетке с возвратной пружиной, износостойкие покрытия:';}
+  else{aiSay('Сориентирую по назначению: для комнат подойдут ручки на розетке (категория <b>«Дверные ручки»</b>), для входных дверей — усиленные модели на планке. Что ближе к вашей задаче?',{chips:[DOOR_CHIPS[0],DOOR_CHIPS[1]]});return;}
+  renderRecs(P.handles);
+  aiSay(text+` ${CLOSING}`,{cards:P.handles,chips:LEAD_CHIPS});
+}
+function showCategories(){
+  aiSay('Каталог GoodLock — 8 направлений по дверям. Выберите категорию: расскажу подробнее и подберу модели.',{grid:true,noTyping:false,delay:800});
+}
+function categoryInfo(id){
+  const c=CAT[id];S.dir=c.name;setParam('p-dir',c.name);markStep(1);S.awaitLock=false;renderRecs(c.products);
+  aiSay(`Категория <b>«${c.name}»</b>. ${c.desc}<br><br>Популярные позиции: ${CLOSING}`,{cards:c.products,chips:LEAD_CHIPS});
+}
+function managerFlow(){
+  S.awaitLock=false;
+  aiSay('С удовольствием. Заполните короткую форму — менеджер «АПЕКС СЕКЬЮРИТИ» уточнит наличие, цену и поможет оформить заказ.',{form:leadFormHtml(),delay:900});
+}
+function greeting(){aiSay('Здравствуйте! Подберу дверные замки, ручки и фурнитуру GoodLock под вашу задачу. Что интересует?',{chips:MAIN_CHIPS});}
+
+/* ================= ROUTER ================= */
+function handleText(text){
+  const q=text.toLowerCase();
+  if(S.awaitLock){S.awaitLock=false;lockDetail(text);return;}
+  if(/заявк|менеджер|связ|позвон|контакт|оформ/.test(q))return managerFlow();
+  if(/ручк/.test(q))return handlesStart();
+  if(/цилиндр|личин/.test(q))return categoryInfo('cylinders');
+  if(/электрон|смарт/.test(q))return categoryInfo('electronic');
+  if(/кодов/.test(q))return categoryInfo('code');
+  if(/доводчик/.test(q))return categoryInfo('closers');
+  if(/петл/.test(q))return categoryInfo('hinges');
+  if(/фурнитур/.test(q))return categoryInfo('hardware');
+  if(/категор|каталог|ассортимент/.test(q))return showCategories();
+  if(/замок|врезн|защит|безопасн|секьюрит|двер/.test(q))return lockStart();
+  if(/привет|здравств|добрый|доброе/.test(q))return greeting();
+  if(/спасибо|благодар/.test(q)){aiSay('Пожалуйста! Если понадобится помощь с выбором или заявка менеджеру — я рядом.');return;}
+  aiSay('Пока я точнее всего работаю с каталогом GoodLock: замки, ручки и фурнитура. Выберите, с чего начать:',{chips:MAIN_CHIPS});
+}
+function dispatch(a){
+  switch(a){
+    case 'pick-lock':return lockPick();
+    case 'categories':return showCategories();
+    case 'manager':case 'lead':return managerFlow();
+    case 'lv-high':return level('high');
+    case 'lv-std':return level('std');
+    case 'lv-budget':return level('budget');
+    case 'door-int':return handleDoor('int');
+    case 'door-entry':return handleDoor('entry');
+    case 'door-help':return handleDoor('help');
+    case 'reset':return resetAll(true);
+    case 'txt-metal':return lockDetail('Для входной металлической двери. Нужен надёжный вариант.');
+    case 'txt-interior':return lockDetail('Для межкомнатной двери.');
+    case 'txt-help':return lockDetail('Нужна консультация, дверь входная металлическая, нужен надёжный вариант.');
+  }
+}
+chatBody.addEventListener('click',e=>{
+  const btn=e.target.closest('[data-a]');
+  if(btn){
+    const row=btn.closest('.chips');if(row.classList.contains('used'))return;
+    row.classList.add('used');userSay(btn.textContent.trim());dispatch(btn.dataset.a);return;
+  }
+  const tile=e.target.closest('[data-cat]');
+  if(tile){
+    const id=tile.dataset.cat,name=CAT[id].name;
+    userSay(`Расскажите про категорию «${name}»`);categoryInfo(id);
+  }
+});
+$('say-form').addEventListener('submit',e=>{
+  e.preventDefault();const inp=$('say'),v=inp.value.trim();if(!v)return;
+  inp.value='';userSay(v);handleText(v);
+});
+
+/* ================= RESET / WELCOME ================= */
+function resetAll(welcome){
+  chatBody.innerHTML='';
+  ['p-dir','p-door','p-purpose','p-level','p-budget'].forEach(id=>$(id).textContent='—');
+  resetSteps();resetRecs();$('leadCard').classList.remove('on');
+  Object.keys(S).forEach(k=>delete S[k]);S.awaitLock=false;
+  if(welcome)doWelcome();
+}
+async function doWelcome(){
+  await wait(500);
+  await aiSay('Здравствуйте! Я — AI-консультант <b>GoodLock</b>, сервис компании «АПЕКС СЕКЬЮРИТИ». Помогу подобрать дверные замки, ручки и фурнитуру: уточню задачу, предложу варианты и передам готовую заявку менеджеру.<br><br>С чего начнём?',{chips:MAIN_CHIPS,delay:1100});
+}
+
+/* ================= AUTOPLAY ================= */
+let playing=false;
+async function playLock(){
+  if(playing)return;playing=true;setBusy(true);resetAll(false);
+  try{
+    await wait(450);
+    userSay('Здравствуйте! Нужен врезной замок для металлической двери. Поможете подобрать?');
+    S.dir='Дверные замки';setParam('p-dir',S.dir);markStep(1);
+    await aiSay(LINE1);
+    await wait(650);
+    userSay('Для входной металлической двери. Нужен надёжный вариант.');
+    setParam('p-door','Металлическая');setParam('p-purpose','Входная дверь');setParam('p-level','Высокий');
+    S.door='Металлическая';S.purpose='Входная дверь';S.level='Высокий';
+    await aiSay(LINE2,{chips:MAIN_CHIPS});
+  }finally{playing=false;setBusy(false);}
+}
+async function playHandles(){
+  if(playing)return;playing=true;setBusy(true);resetAll(false);
+  try{
+    await wait(450);
+    userSay('Добрый день! Интересуют дверные ручки. Что можете предложить?');
+    S.dir='Дверные ручки';setParam('p-dir',S.dir);markStep(1);
+    await aiSay('Конечно! Подскажите, пожалуйста, для какой двери нужны ручки — межкомнатной или входной? И какая отделка предпочтительнее: матовая или полированная?',{chips:DOOR_CHIPS});
+    await wait(650);
+    userSay('Для межкомнатных дверей, матовое покрытие.');
+    setParam('p-door','Межкомнатная');setParam('p-purpose','Ручки на розетке');
+    S.door='Межкомнатная';S.purpose='Ручки на розетке';renderRecs(P.handles);
+    await aiSay('Понял. Для межкомнатных дверей подойдёт категория <b>«Дверные ручки»</b> — модели на розетке: тихая защёлка, аккуратный монтаж, матовые покрытия. Вот популярные позиции: '+CLOSING,{cards:P.handles,chips:LEAD_CHIPS});
+  }finally{playing=false;setBusy(false);}
+}
+$('btn-lock').addEventListener('click',playLock);
+$('btn-handles').addEventListener('click',playHandles);
+$('btn-reset').addEventListener('click',()=>{if(!playing)resetAll(true);});
+document.addEventListener('keydown',e=>{
+  if(e.target.matches('input,textarea')||playing)return;
+  if(e.key==='1')playLock();
+  if(e.key==='2')playHandles();
+});
+
+resetAll(true);
+</script>
+</body>
+</html>
